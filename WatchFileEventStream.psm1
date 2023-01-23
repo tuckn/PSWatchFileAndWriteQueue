@@ -30,12 +30,12 @@ Default is "utf-8"
 The second of displaying processing dot interval.
 
 .Example
-PS> Watch-FileAndWriteQueue -WatchingDir "C:\notes" -FilteredName "*.xls*"
+PS> Watch-FileEvent -WatchingDir "C:\notes" -FilteredName "*.xls*"
 #>
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
 
-function Watch-FileAndWriteQueue {
+function Watch-FileEvent {
     [CmdletBinding()]
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -214,4 +214,4 @@ class QueueWriter {
     }
 }
 
-Export-ModuleMember -Function Watch-FileAndWriteQueue
+Export-ModuleMember -Function Watch-FileEvent

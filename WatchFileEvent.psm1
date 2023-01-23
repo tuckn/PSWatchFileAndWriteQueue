@@ -33,12 +33,12 @@ If your PoweShell less than 6 when you can only use "unknown,string,unicode,bige
 The second of displaying processing dot interval.
 
 .Example
-PS> Watch-FileAndWriteQueue -WatchingDir "C:\notes" -FilteredName "*.xls*"
+PS> Watch-FileEvent -WatchingDir "C:\notes" -FilteredName "*.xls*"
 #>
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
 
-function Watch-FileAndWriteQueue {
+function Watch-FileEvent {
     [CmdletBinding()]
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
@@ -90,14 +90,14 @@ function Watch-FileAndWriteQueue {
 
         # FileSystemWatcher for the watching files
         # https://docs.microsoft.com/ja-jp/dotnet/api/system.io.filesystemwatcher?view=net-5.0
-        $watcher = New-Object System.IO.FileSystemWatcher
+        [System.IO.FileSystemWatcher] $watcher = New-Object System.IO.FileSystemWatcher
         $watcher.Path = $WatchingDir
         $watcher.Filter = $FilteredName
         $watcher.IncludeSubdirectories = $IncludesSubdir
 
         # NOTE
         # An action passed to `Register-ObjectEvent` has their own local scope. Therefore, all variables defined in the current scope, such as the arguments of this function, are null in the action. Therefore, it is necessary to define the variables used in the action in PSObject and pass it as the argument `-MessageData` of `Register-ObjectEvent`.
-        $msgData = New-Object psobject -property @{
+        [PSCustomObject] $msgData = New-Object -TypeName PSObject -Property @{
             QueueDirPath = $QueueDir
             QueueFileNamePrefix = $QueueFileNamePrefix
             QueueFileEncoding = $QueueFileEncoding
@@ -109,20 +109,20 @@ function Watch-FileAndWriteQueue {
                 Write-Host "!"
 
                 # Shorthand
-                $queueDir = $Event.MessageData.QueueDirPath
-                $qFileNamePrefix = $Event.MessageData.QueueFileNamePrefix
-                $enc = $Event.MessageData.QueueFileEncoding
-                $changeType = $Event.SourceEventArgs.ChangeType
-                $evPath = $Event.SourceEventArgs.FullPath
-                $oldPath = $Event.SourceEventArgs.OldFullPath
+                [String] $queueDir = $event.MessageData.QueueDirPath
+                [String] $qFileNamePrefix = $event.MessageData.QueueFileNamePrefix
+                [String] $enc = $event.MessageData.QueueFileEncoding
+                [System.IO.WatcherChangeTypes] $changeType = $event.SourceEventArgs.ChangeType
+                [String] $evPath = $event.SourceEventArgs.FullPath
+                [String] $oldPath = $event.SourceEventArgs.OldFullPath
 
                 # Setting the queue file path
-                $dt = $Event.TimeGenerated.ToString("yyyyMMddTHHmmss.ffffff")
-                $qFileName = "$($qFileNamePrefix)$($dt).txt"
-                $qFilePath = Join-Path -Path $queueDir -ChildPath $qFileName
+                [String] $dt = $event.TimeGenerated.ToString("yyyyMMddTHHmmss.ffffff")
+                [String] $qFileName = "$($qFileNamePrefix)$($dt).txt"
+                [String] $qFilePath = Join-Path -Path $queueDir -ChildPath $qFileName
 
                 # DATETIME [EVENT_NAME] FILE_PATH < OLD_PATH
-                $evLogStr = "$($dt) [$($changeType)] `"$($evPath)`" < `"$($oldPath)`""
+                [String] $evLogStr = "$($dt) [$($changeType)] `"$($evPath)`" < `"$($oldPath)`""
 
                 Write-Host "[info] $($evLogStr)"
 
@@ -196,4 +196,4 @@ function Watch-FileAndWriteQueue {
     }
 }
 
-Export-ModuleMember -Function Watch-FileAndWriteQueue
+Export-ModuleMember -Function Watch-FileEvent

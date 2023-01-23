@@ -1,4 +1,4 @@
-﻿using module ".\WatchFileAndWriteQueue.psm1"
+﻿using module ".\WatchFileEvent.psm1"
 
 Param(
     [Parameter(Position = 0, Mandatory = $true)]
@@ -30,7 +30,7 @@ Param(
 $ErrorActionPreference = "Continue"
 Set-StrictMode -Version 3.0
 
-Watch-FileAndWriteQueue `
+Watch-FileEvent `
     -WatchingDir "$WatchingDir" `
     -FilteredName $FilteredName `
     -FilteredEvents $FilteredEvents `
