@@ -1,0 +1,2 @@
+﻿20230207T075931.030340 [Created] "C:\Users\USERNAME\notebooks\Excel\Book1.xlsx" < ""
+20230207T075931.030340 [Deleted] "C:\Users\USERNAME\notebooks\Excel\Book1.xlsx" < ""

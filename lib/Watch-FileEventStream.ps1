@@ -1,9 +1,9 @@
 ﻿<#
 .Synopsis
-Watch a directory and write event info on queue files.
+Watch a directory and write event info on log files.
 
 .Description
-Watch a directory and write event info on queue files.
+Watch a directory and write event info on log files.
 
 .Parameter WatchingDir
 The watched folder path.
@@ -17,29 +17,30 @@ Event names to be handled. Default is all events `@("Created", "Changed", "Renam
 .Parameter IncludesSubdir
 Whether to include subfolders as watched or not. Default is `$False`.
 
-.Parameter QueueDir
-The foler path to write queue files. Default is `%TEMP%\Queue_{GUID}`.
+.Parameter LogDir
+The foler path to write log files. Default is `%TEMP%\PSWatchFileEvent_{GUID}`.
 
-.Parameter QueueFileName
-the queue file name.
+.Parameter LogFileName
+the log file name.
 
-.Parameter QueueFileEncoding
+.Parameter LogFileEncoding
 Default is "utf-8"
 
 .Parameter DotIntervalSec
 The second of displaying processing dot interval.
 
 .Example
-PS> Watch-FileEvent -WatchingDir "C:\notes" -FilteredName "*.xls*"
+PS> Watch-FileEventStream -WatchingDir "C:\notes" -FilteredName "*.xls*"
 #>
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
 
-function Watch-FileEvent {
+function Watch-FileEventStream {
     [CmdletBinding()]
     Param(
         [Parameter(Position = 0, Mandatory = $true)]
         [ValidateScript({ Test-Path -LiteralPath $_ })]
+        [ValidateScript({ (Get-Item $_).PSIsContainer })]
         [String] $WatchingDir,
 
         [Parameter(Position = 1)]
@@ -52,33 +53,31 @@ function Watch-FileEvent {
         [Boolean] $IncludesSubdir = $False,
 
         [Parameter(Position = 4)]
-        [String] $QueueDir = ($env:TEMP | Join-Path -ChildPath "Queue_$($([System.Guid]::NewGuid().Guid))"),
+        [String] $LogDir = ($env:TEMP | Join-Path -ChildPath "PSWatchFileEvent_$($([System.Guid]::NewGuid().Guid))"),
 
         [Parameter(Position = 5)]
-        [String] $QueueFileName = ((Get-Date -Format "yyyyMMddTHHmmssK").Replace(':', '') + ".txt"),
+        [String] $LogFileName = ((Get-Date -Format "yyyyMMddTHHmmssK").Replace(':', '') + ".txt"),
 
         [Parameter(Position = 6)]
-        [String] $QueueFileEncoding = "utf-8",
+        [String] $LogFileEncoding = "utf-8",
 
         [Parameter(Position = 7)]
         [Int16] $DotIntervalSec = 3
     )
     Process {
-        Write-Host "`$WatchingDir: $($WatchingDir)"
-        Write-Host "`$DotIntervalSec: $($DotIntervalSec)"
-        Write-Host "`$FilteredName: $($FilteredName)"
-        Write-Host "`$FilteredEvents: $($FilteredEvents)"
-        Write-Host "`$IncludesSubdir: $($IncludesSubdir)"
-        Write-Host "`$QueueDir: $($QueueDir)"
-        Write-Host "`$QueueFileName: $($QueueFileName)"
-        Write-Host "`$QueueFileEncoding: $($QueueFileEncoding)"
-
-        if (-not((Get-Item $WatchingDir).PSIsContainer)) {
-            Write-Error "`$WatchingDir is not a folder. $($WatchingDir)"
-            exit 1
+        # Checking the arguments
+        . {
+            Write-Host "`$WatchingDir: $($WatchingDir)"
+            Write-Host "`$DotIntervalSec: $($DotIntervalSec)"
+            Write-Host "`$FilteredName: $($FilteredName)"
+            Write-Host "`$FilteredEvents: $($FilteredEvents)"
+            Write-Host "`$IncludesSubdir: $($IncludesSubdir)"
+            Write-Host "`$LogDir: $($LogDir)"
+            Write-Host "`$LogFileName: $($LogFileName)"
+            Write-Host "`$LogFileEncoding: $($LogFileEncoding)"
         }
 
-        $global:streamWriter = [QueueWriter]::new($QueueDir, $QueueFileName, $QueueFileEncoding)
+        $global:streamWriter = [LogWriter]::new($LogDir, $LogFileName, $LogFileEncoding)
 
         # FileSystemWatcher for the watching files
         # https://docs.microsoft.com/ja-jp/dotnet/api/system.io.filesystemwatcher?view=net-5.0
@@ -105,7 +104,7 @@ function Watch-FileEvent {
                 $oldPath = $Event.SourceEventArgs.OldFullPath
                 Write-Host "[info] renamed filepath: $($oldPath)"
 
-                $global:streamWriter.WriteQueue($dt, $changeType, $oldPath, $evPath)
+                $global:streamWriter.WriteLog($dt, $changeType, $oldPath, $evPath)
             }
             catch {
                 Write-Host "[error] $($_.Exception.Message)"
@@ -173,33 +172,33 @@ function Watch-FileEvent {
             $FileSystemWatcher.Dispose()
         }
 
-        return $streamWriter.queueFilePath
+        return $streamWriter.logFilePath
     }
 }
 
-class QueueWriter {
-    [string] $queueFilePath
+class LogWriter {
+    [string] $logFilePath
     [object] $streamWriter
 
-    QueueWriter(
-        [string] $queueDir,
-        [string] $queueFilename,
+    LogWriter(
+        [string] $logDir,
+        [string] $logFilename,
         [string] $encoding = "utf-8"
     ){
         # Creating the folder
-        Write-Host "[info] Tha path of queue directory is `"$($queueDir)`""
-        [System.IO.Directory]::CreateDirectory($queueDir)
+        Write-Host "[info] Tha path of log directory is `"$($logDir)`""
+        [System.IO.Directory]::CreateDirectory($logDir)
 
-        # Setting the queue file path
-        $this.queueFilePath = Join-Path -Path $queueDir -ChildPath $queueFilename
+        # Setting the log file path
+        $this.logFilePath = Join-Path -Path $logDir -ChildPath $logFilename
 
-        # StreamWriter for the queue file
+        # StreamWriter for the log file
         # https://learn.microsoft.com/en-us/dotnet/api/system.io.streamwriter?view=net-7.0
         $enc = [Text.Encoding]::GetEncoding($encoding)
-        $this.streamWriter = New-Object System.IO.StreamWriter($this.queueFilePath, $true, $enc)
+        $this.streamWriter = New-Object System.IO.StreamWriter($this.logFilePath, $true, $enc)
     }
 
-    WriteQueue(
+    WriteLog(
         [string] $dateString,
         [string] $changeType,
         [string] $oldPath,
@@ -214,4 +213,4 @@ class QueueWriter {
     }
 }
 
-Export-ModuleMember -Function Watch-FileEvent
+Export-ModuleMember -Function Watch-FileEventStream
